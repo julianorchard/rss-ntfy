@@ -17,26 +17,34 @@
 
 ## Code:
 
-import os
-import requests
 from bs4 import BeautifulSoup
+from pathlib import Path
+import os
+import re
+import requests
 
 SCRIPT_DIR    = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
 SERVICES      = [
                  {
                   "service": "nitter", 
-                  "rss-url": "https://uk.unofficialbird.com/{username}/rss", 
-                  "descriptor": "🎶 Tweet"
+                  "rss-url": "https://uk.unofficialbird.com/{{ custom }}/rss", 
+                  "descriptor": "🐦 Tweet"
                  },
                  {
                   "service": "proxitok", 
-                  "rss-url": "https://proxitok.pabloferreiro.es/@{username}/rss", 
+                  "rss-url": "https://proxitok.pabloferreiro.es/@{{ custom }}/rss", 
                   "descriptor": "🎶 TikTok"
                  },
                  {
                   "service": "invidious", 
-                  "rss-url": "https://invidious.snopyta.org/feed/channel/{username}", 
-                  "descriptor": "📽 YouTube video "
+                  "rss-url": "https://invidious.snopyta.org/feed/channel/{{ custom }}",
+                  "descriptor": "📽 YouTube video"
+
+                 },
+                 { 
+                  "service": "teddit",
+                  "rss-url": "https://teddit.net/r/{{ custom }}?api&type=rss",
+                  "descriptor": "🎩 Reddit post" 
                  }
                 ]
 NTFY_INSTANCE = "https://ntfy.julian.rocks/"
@@ -82,21 +90,53 @@ def get_user_list(user_list_file):
         user_list = [l.rstrip() for l in f]
     return user_list
 
+def handlebar_replace(input, replacement):
+    '''
+    Very simple Handlebar style replace:
+    https://handlebarsjs.com
+
+    Takes the input URL and replaces the {{ custom }}
+    part, which will be the current user part.
+    '''
+    return re.sub('\{\{.*\}\}', replacement, input)
+
+def check_file_list_exists(file_list):
+    '''
+    Takes a list of files, checks if they exist, 
+    creates them if they do not!
+
+    I'm using this function instead of just relying on
+    'w+', because we 'r+' the History file, at one point,
+    and 'r+' doesn't create the file if it doesn't exist 
+    (unlike 'w+' and 'a+').
+    '''
+    for file in file_list:
+        Path(file).touch(exist_ok=True)
+
 def main():
     '''
     This article by Matthew Wimberly got me along the right lines with things:
     https://codeburst.io/building-an-rss-feed-scraper-with-python-73715ca06e1f
     '''
     for service in SERVICES:
+        # Follow File and History File
         user_list_file = f"{SCRIPT_DIR}{service['service']}-follow-list.txt"
-        instance       = f"{service['rss-url']}"
-        ntfy_topic     = f"{service['service']}"
-        service_log    = f"{SCRIPT_DIR}{service['service']}.log"
-        descriptor     = service['descriptor']
-        user_list = get_user_list(user_list_file)
+        service_hist   = f"{SCRIPT_DIR}{service['service']}_hist"
+        check_file_list_exists([user_list_file, service_hist])
+
+        # Instance, Topic, Descriptor
+        instance    = f"{service['rss-url']}"
+        ntfy_topic  = f"{service['service']}"
+        descriptor  = service['descriptor']
+
+        # TODO: Rename everything with 'user', as it's more generally an
+        #       account? Not sure if account is the best name, either.
+        user_list   = get_user_list(user_list_file)
+
         for username in user_list:
+            current_instance = handlebar_replace(instance, username)
             try:
-                req = requests.get(f"{instance}")
+                req = requests.get(f"{current_instance}")
                 rss_content = BeautifulSoup(req.content, "lxml-xml")
                 articles = rss_content.findAll('item')
                 for a in articles:
@@ -104,8 +144,11 @@ def main():
                     link      = a.find('link').text
                     published = a.find('pubDate').text
 
-                    with open(service_log, "r+") as f:
-                        data = f.read()
+                    with open(service_hist, "r+") as hist_file:
+                        data = hist_file.read()
+                        # If the link isn't in data, not only
+                        # do we want to add it to the Hist file,
+                        # we also want to, of course, ntfy:
                         if not link in data:
                             ntfyr_complex(ntfy_topic, 
                                           username, 
@@ -113,9 +156,10 @@ def main():
                                           link, 
                                           published,
                                           descriptor)
-                            f.write(f"{link}\n")
+                            hist_file.write(f"{link}\n")
 
             except Exception as e:
+                # TODO: Just use the ntfy JSON request format
                 ntfyr(f"Error with scraping {username}, '{e}'.", ntfy_topic)
 
 if __name__ == '__main__':
