@@ -22,14 +22,23 @@ import requests
 from bs4 import BeautifulSoup
 
 SCRIPT_DIR    = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
-SERVICES      = [{"service": "nitter", 
-                  "url": "https://uk.unofficialbird.com/", 
-                  "descriptor": "Tweet",
-                  "icon": "🐦"}, 
-                 {"service": "proxitok", 
-                  "url": "https://proxitok.pabloferreiro.es/@", 
-                  "descriptor": "TikTok",
-                  "icon": "🎶"}]
+SERVICES      = [
+                 {
+                  "service": "nitter", 
+                  "rss-url": "https://uk.unofficialbird.com/{username}/rss", 
+                  "descriptor": "🎶 Tweet"
+                 },
+                 {
+                  "service": "proxitok", 
+                  "rss-url": "https://proxitok.pabloferreiro.es/@{username}/rss", 
+                  "descriptor": "🎶 TikTok"
+                 },
+                 {
+                  "service": "invidious", 
+                  "rss-url": "https://invidious.snopyta.org/feed/channel/{username}", 
+                  "descriptor": "📽 YouTube video "
+                 }
+                ]
 NTFY_INSTANCE = "https://ntfy.julian.rocks/"
 
 
@@ -40,7 +49,7 @@ def ntfyr(message, ntfy_topic):
     '''
     requests.post(f'{NTFY_INSTANCE}{ntfy_topic}', data=f"{message}".encode(encoding="UTF-8"))
 
-def ntfyr_complex(ntfy_topic, username, title, link, published, i, d):
+def ntfyr_complex(ntfy_topic, username, title, link, published, description):
     '''
     This sends a more complicated notification via ntfy.
 
@@ -48,7 +57,7 @@ def ntfyr_complex(ntfy_topic, username, title, link, published, i, d):
     array', below:
     https://docs.ntfy.sh/publish/
     '''
-    message_text = f"{i} {d} from {username}"
+    message_text = f"{description} from {username}"
     if title != "":
         message_text = f"{message_text}:\n\n{title}!"
     else:
@@ -80,20 +89,19 @@ def main():
     '''
     for service in SERVICES:
         user_list_file = f"{SCRIPT_DIR}{service['service']}-follow-list.txt"
-        instance       = f"{service['url']}"
+        instance       = f"{service['rss-url']}"
         ntfy_topic     = f"{service['service']}"
         service_log    = f"{SCRIPT_DIR}{service['service']}.log"
         descriptor     = service['descriptor']
-        icon           = service['icon']
         user_list = get_user_list(user_list_file)
         for username in user_list:
             try:
-                req = requests.get(f"{instance}{username}/rss")
+                req = requests.get(f"{instance}")
                 rss_content = BeautifulSoup(req.content, "lxml-xml")
                 articles = rss_content.findAll('item')
                 for a in articles:
-                    title = a.find('title').text
-                    link = a.find('link').text
+                    title     = a.find('title').text
+                    link      = a.find('link').text
                     published = a.find('pubDate').text
 
                     with open(service_log, "r+") as f:
@@ -104,7 +112,6 @@ def main():
                                           title, 
                                           link, 
                                           published,
-                                          icon,
                                           descriptor)
                             f.write(f"{link}\n")
 
