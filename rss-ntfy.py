@@ -26,25 +26,28 @@ import requests
 SCRIPT_DIR    = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
 SERVICES      = [
                  {
-                  "service": "nitter", 
-                  "rss-url": "https://uk.unofficialbird.com/{{ custom }}/rss", 
+                  "service": "nitter",
+                  "rss-url": "https://uk.unofficialbird.com/{{ custom }}/rss",
                   "descriptor": "🐦 Tweet"
                  },
                  {
-                  "service": "proxitok", 
-                  "rss-url": "https://proxitok.pabloferreiro.es/@{{ custom }}/rss", 
+                  "service": "proxitok",
+                  "rss-url": "https://proxitok.pabloferreiro.es/@{{ custom }}/rss",
                   "descriptor": "🎶 TikTok"
                  },
                  {
-                  "service": "invidious", 
+                  "service": "invidious",
                   "rss-url": "https://invidious.snopyta.org/feed/channel/{{ custom }}",
-                  "descriptor": "📽 YouTube video"
-
+                  "descriptor": "📽 YouTube video",
+                  "item-alt": "entry",
+                  "link-alt": "uri",
+                  "pubdate-alt": "published",
+                  "name-alt": "name"
                  },
-                 { 
+                 {
                   "service": "teddit",
                   "rss-url": "https://teddit.net/r/{{ custom }}?api&type=rss",
-                  "descriptor": "🎩 Reddit post" 
+                  "descriptor": "🎩 Reddit post"
                  }
                 ]
 NTFY_INSTANCE = "https://ntfy.julian.rocks/"
@@ -102,12 +105,12 @@ def handlebar_replace(input, replacement):
 
 def check_file_list_exists(file_list):
     '''
-    Takes a list of files, checks if they exist, 
+    Takes a list of files, checks if they exist,
     creates them if they do not!
 
     I'm using this function instead of just relying on
     'w+', because we 'r+' the History file, at one point,
-    and 'r+' doesn't create the file if it doesn't exist 
+    and 'r+' doesn't create the file if it doesn't exist
     (unlike 'w+' and 'a+').
     '''
     for file in file_list:
@@ -129,20 +132,32 @@ def main():
         ntfy_topic  = f"{service['service']}"
         descriptor  = service['descriptor']
 
+        # Alternative Tags Input
+        item_tag    = service.get("item-alt",    "item")
+        title_tag   = service.get("title-alt",   "title")
+        link_tag    = service.get("link-alt",    "link")
+        date_tag    = service.get("pubdate-alt", "pubDate")
+
         # TODO: Rename everything with 'user', as it's more generally an
         #       account? Not sure if account is the best name, either.
         user_list   = get_user_list(user_list_file)
 
         for username in user_list:
             current_instance = handlebar_replace(instance, username)
+            name_tag  = service.get("name-alt", username)
             try:
                 req = requests.get(f"{current_instance}")
                 rss_content = BeautifulSoup(req.content, "lxml-xml")
-                articles = rss_content.findAll('item')
+                articles = rss_content.findAll(item_tag)
                 for a in articles:
-                    title     = a.find('title').text
-                    link      = a.find('link').text
-                    published = a.find('pubDate').text
+                    title     = a.find(title_tag).text
+                    link      = a.find(link_tag).text
+                    published = a.find(date_tag).text
+
+                    # If we need a different name from the username,
+                    # handle that here.
+                    if name_tag != username:
+                        name  = a.find(name_tag).text
 
                     with open(service_hist, "r+") as hist_file:
                         data = hist_file.read()
@@ -150,17 +165,17 @@ def main():
                         # do we want to add it to the Hist file,
                         # we also want to, of course, ntfy:
                         if not link in data:
-                            ntfyr_complex(ntfy_topic, 
-                                          username, 
-                                          title, 
-                                          link, 
+                            ntfyr_complex(ntfy_topic,
+                                          name,
+                                          title,
+                                          link,
                                           published,
                                           descriptor)
                             hist_file.write(f"{link}\n")
 
             except Exception as e:
                 # TODO: Just use the ntfy JSON request format
-                ntfyr(f"Error with scraping {username}, '{e}'.", ntfy_topic)
+                ntfyr(f"Error with scraping {name}, '{e}'.", ntfy_topic)
 
 if __name__ == '__main__':
     main()
