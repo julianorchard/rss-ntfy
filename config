@@ -1,0 +1,9 @@
+[nitter]
+  url: https://uk.unofficialbird.com/jdorchard/rss
+  descriptor: "🐦 New tweet from "
+  item-alt: item
+  title-alt: title
+  link-alt: link
+  pubdate-alt: pubDate
+# This is a comment
+  name-alt: dc:creator
