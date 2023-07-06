@@ -1,0 +1,20 @@
+nitter:
+  service: nitter
+  rss-url: https://uk.unofficialbird.com/{{ custom }}/rss
+  descriptor: 🐦 Tweet
+
+proxitok:
+  service: proxitok
+  rss-url: https://proxitok.pabloferreiro.es/@{{ custom }}/rss
+  descriptor: 🎶 TikTok
+
+invidious:
+  service: invidious
+  rss-url: https://invidious.snopyta.org/feed/channel/{{ custom }}
+  descriptor: 📽 YouTube video
+
+teddit:
+  service: teddit
+  rss-url: https://teddit.net/r/{{ custom }}?api&type=rss
+  descriptor: 🎩 Reddit post
+

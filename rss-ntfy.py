@@ -22,35 +22,12 @@ from pathlib import Path
 import os
 import re
 import requests
+import yaml
 
-SCRIPT_DIR    = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
-SERVICES      = [
-                 {
-                  "service": "nitter",
-                  "rss-url": "https://uk.unofficialbird.com/{{ custom }}/rss",
-                  "descriptor": "🐦 Tweet"
-                 },
-                 {
-                  "service": "proxitok",
-                  "rss-url": "https://proxitok.pabloferreiro.es/@{{ custom }}/rss",
-                  "descriptor": "🎶 TikTok"
-                 },
-                 {
-                  "service": "invidious",
-                  "rss-url": "https://invidious.snopyta.org/feed/channel/{{ custom }}",
-                  "descriptor": "📽 YouTube video",
-                  "item-alt": "entry",
-                  "link-alt": "uri",
-                  "pubdate-alt": "published",
-                  "name-alt": "name"
-                 },
-                 {
-                  "service": "teddit",
-                  "rss-url": "https://teddit.net/r/{{ custom }}?api&type=rss",
-                  "descriptor": "🎩 Reddit post"
-                 }
-                ]
-NTFY_INSTANCE = "https://ntfy.julian.rocks/"
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
+with open("config.yaml", "r") as config_file_contents:
+    CONFIG = yaml.safe_load(config_file_contents)
+NTFY_INSTANCE = "https://ntfy.sh/"
 
 
 def ntfyr(message, ntfy_topic):
@@ -101,7 +78,7 @@ def handlebar_replace(input, replacement):
     Takes the input URL and replaces the {{ custom }}
     part, which will be the current user part.
     '''
-    return re.sub('\{\{.*\}\}', replacement, input)
+    return re.sub('{{.*}}', replacement, input)
 
 def check_file_list_exists(file_list):
     '''
@@ -121,22 +98,22 @@ def main():
     This article by Matthew Wimberly got me along the right lines with things:
     https://codeburst.io/building-an-rss-feed-scraper-with-python-73715ca06e1f
     '''
-    for service in SERVICES:
+    for service_name in CONFIG:
         # Follow File and History File
-        user_list_file = f"{SCRIPT_DIR}{service['service']}-follow-list.txt"
-        service_hist   = f"{SCRIPT_DIR}{service['service']}_hist"
+        user_list_file = f"{SCRIPT_DIR}{CONFIG[service_name]['service']}-follow-list.txt"
+        service_hist   = f"{SCRIPT_DIR}{CONFIG[service_name]['service']}_hist"
         check_file_list_exists([user_list_file, service_hist])
 
         # Instance, Topic, Descriptor
-        instance    = f"{service['rss-url']}"
-        ntfy_topic  = f"{service['service']}"
-        descriptor  = service['descriptor']
+        instance    = f"{CONFIG[service_name]['rss-url']}"
+        ntfy_topic  = f"{CONFIG[service_name]['service']}-jdo-personal"
+        descriptor  = CONFIG[service_name]['descriptor']
 
         # Alternative Tags Input
-        item_tag    = service.get("item-alt",    "item")
-        title_tag   = service.get("title-alt",   "title")
-        link_tag    = service.get("link-alt",    "link")
-        date_tag    = service.get("pubdate-alt", "pubDate")
+        item_tag    = CONFIG[service_name].get("item-alt",    "item")
+        title_tag   = CONFIG[service_name].get("title-alt",   "title")
+        link_tag    = CONFIG[service_name].get("link-alt",    "link")
+        date_tag    = CONFIG[service_name].get("pubdate-alt", "pubDate")
 
         # TODO: Rename everything with 'user', as it's more generally an
         #       account? Not sure if account is the best name, either.
@@ -144,7 +121,7 @@ def main():
 
         for username in user_list:
             current_instance = handlebar_replace(instance, username)
-            name_tag  = service.get("name-alt", username)
+            name_tag = CONFIG[service_name].get("name-alt", username)
             try:
                 req = requests.get(f"{current_instance}")
                 rss_content = BeautifulSoup(req.content, "lxml-xml")
@@ -157,7 +134,9 @@ def main():
                     # If we need a different name from the username,
                     # handle that here.
                     if name_tag != username:
-                        name  = a.find(name_tag).text
+                        name = a.find(name_tag).text
+                    else:
+                        name = username
 
                     with open(service_hist, "r+") as hist_file:
                         data = hist_file.read()
@@ -175,7 +154,7 @@ def main():
 
             except Exception as e:
                 # TODO: Just use the ntfy JSON request format
-                ntfyr(f"Error with scraping {name}, '{e}'.", ntfy_topic)
+                ntfyr(f"Error with scraping {name_tag}, '{e}'.", ntfy_topic)
 
 if __name__ == '__main__':
     main()
