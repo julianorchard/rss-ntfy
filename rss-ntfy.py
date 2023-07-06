@@ -27,6 +27,7 @@ import yaml
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__)) + "/rss-ntfy/"
 with open("config.yaml", "r") as config_file_contents:
     CONFIG = yaml.safe_load(config_file_contents)
+# TODO: This could also be abstracted to the config file, with a default value
 NTFY_INSTANCE = "https://ntfy.sh/"
 
 
@@ -106,7 +107,7 @@ def main():
 
         # Instance, Topic, Descriptor
         instance    = f"{CONFIG[service_name]['rss-url']}"
-        ntfy_topic  = f"{CONFIG[service_name]['service']}-jdo-personal"
+        ntfy_topic  = f"{CONFIG[service_name]['ntfy-topic']}"
         descriptor  = CONFIG[service_name]['descriptor']
 
         # Alternative Tags Input

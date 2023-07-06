@@ -2,19 +2,23 @@ nitter:
   service: nitter
   rss-url: https://uk.unofficialbird.com/{{ custom }}/rss
   descriptor: 🐦 Tweet
+  ntfy-topic: nitter-rss-ntfy-test
 
 proxitok:
   service: proxitok
   rss-url: https://proxitok.pabloferreiro.es/@{{ custom }}/rss
   descriptor: 🎶 TikTok
+  ntfy-topic: proxitok-rss-ntfy-test
 
 invidious:
   service: invidious
   rss-url: https://invidious.snopyta.org/feed/channel/{{ custom }}
   descriptor: 📽 YouTube video
+  ntfy-topic: invidious-rss-ntfy-test
 
 teddit:
   service: teddit
   rss-url: https://teddit.net/r/{{ custom }}?api&type=rss
   descriptor: 🎩 Reddit post
+  ntfy-topic: teddit-rss-ntfy-test
 
