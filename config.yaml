@@ -1,8 +1,4 @@
-nitter:
-  service: nitter
-  rss-url: https://uk.unofficialbird.com/{{ custom }}/rss
-  descriptor: 🐦 Tweet
-  ntfy-topic: nitter-rss-ntfy-test
+---
 
 proxitok:
   service: proxitok

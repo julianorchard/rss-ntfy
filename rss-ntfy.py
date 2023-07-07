@@ -83,7 +83,7 @@ def handlebar_replace(input, replacement):
 
 def check_file_list_exists(file_list):
     '''
-    Takes a list of files, checks if they exist,
+    Takes a list o files, checks if they exist,
     creates them if they do not!
 
     I'm using this function instead of just relying on
@@ -94,15 +94,28 @@ def check_file_list_exists(file_list):
     for file in file_list:
         Path(file).touch(exist_ok=True)
 
+def mkdirp(folder):
+    'mkdir -p folder'
+    Path(folder).mkdir(parents=True, exist_ok=True)
+
 def main():
     '''
     This article by Matthew Wimberly got me along the right lines with things:
     https://codeburst.io/building-an-rss-feed-scraper-with-python-73715ca06e1f
     '''
+
+    # Logfile Save Location
+    if "XDG_CACHE_HOME" in os.environ:
+        log_location = os.environ['XDG_CACHE_HOME']
+    else:
+        log_location = f"{Path.home()}/.cache"
+
+    mkdirp(f"{log_location}/rss-ntfy/")
+
     for service_name in CONFIG:
         # Follow File and History File
         user_list_file = f"{SCRIPT_DIR}{CONFIG[service_name]['service']}-follow-list.txt"
-        service_hist   = f"{SCRIPT_DIR}{CONFIG[service_name]['service']}_hist"
+        service_hist   = f"{log_location}{CONFIG[service_name]['service']}_hist"
         check_file_list_exists([user_list_file, service_hist])
 
         # Instance, Topic, Descriptor
