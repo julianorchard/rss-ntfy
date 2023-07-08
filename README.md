@@ -22,6 +22,15 @@ Both of these provide RSS feeds, which are on basically every page plus `/rss`: 
 pip install -i requirements.txt
 ```
 
+Alternatively, use Docker compose:
+
+```sh
+docker compose up
+```
+
+This will create a persistent volume for the storage of the _hist files, too (if
+run without Docker, these are put in `$XDG_CACHE_HOME`).
+
 ### Configuration
 
 Edit the `config.yaml` file:

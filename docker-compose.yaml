@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  rss-ntfy:
+    build:
+      context: .
+    volumes:
+      - histfiles:/root/:rw
+
+volumes:
+  histfiles:
+
